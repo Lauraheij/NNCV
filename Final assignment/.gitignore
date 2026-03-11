@@ -1,0 +1,16 @@
+# Ignore the 10,000+ images and data
+data/
+img/
+local_data/
+local_output/
+*.png
+*.jpg
+
+# Ignore large model checkpoints
+checkpoints/
+*.tar
+*.sif
+
+# Python junk
+__pycache__/
+.env

@@ -1,0 +1,29 @@
+wandb: Currently logged in as: l-heij (l-heij-eindhoven-university-of-technology) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: l-heij (l-heij-eindhoven-university-of-technology) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: - Waiting for wandb.init()...wandb: \ Waiting for wandb.init()...wandb: Tracking run with wandb version 0.19.6
+wandb: Run data is saved locally in /home/scur2194/wandb/wandb/run-20260225_113052-kffg9fvj
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run setup-test2502
+wandb: ⭐️ View project at https://wandb.ai/l-heij-eindhoven-university-of-technology/5lsm0-cityscapes-segmentation
+wandb: 🚀 View run at https://wandb.ai/l-heij-eindhoven-university-of-technology/5lsm0-cityscapes-segmentation/runs/kffg9fvj
+Epoch 0001/0001
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:         epoch ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb: learning_rate ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:    train_loss █▇▆▆▅▅▄▄▄▄▃▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁
+wandb:    valid_loss ▁
+wandb: 
+wandb: Run summary:
+wandb:         epoch 1
+wandb: learning_rate 0.001
+wandb:    train_loss 1.00653
+wandb:    valid_loss 1.48074
+wandb: 
+wandb: 🚀 View run setup-test2502 at: https://wandb.ai/l-heij-eindhoven-university-of-technology/5lsm0-cityscapes-segmentation/runs/kffg9fvj
+wandb: ⭐️ View project at: https://wandb.ai/l-heij-eindhoven-university-of-technology/5lsm0-cityscapes-segmentation
+wandb: Synced 5 W&B file(s), 2 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: /home/scur2194/wandb/wandb/run-20260225_113052-kffg9fvj/logs
+Training complete!
