@@ -20,7 +20,7 @@ import torch
 import torch.nn as nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
-from torchvision.datasets import Cityscapes, wrap_dataset_for_transforms_v2
+from torchvision.datasets import Cityscapes
 from torchvision.utils import make_grid
 from torchvision.transforms.v2 import (
     Compose,
@@ -28,6 +28,7 @@ from torchvision.transforms.v2 import (
     Resize,
     ToImage,
     ToDtype,
+    InterpolationMode
 )
 
 from model import Model
@@ -91,31 +92,38 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Define the transforms to apply to the data
-    transform = Compose([
+    img_transform = Compose([
+    ToImage(),
+    Resize((256, 256)),
+    ToDtype(torch.float32, scale=True),
+    Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+
+    # Target transform (mask)
+    target_transform = Compose([
         ToImage(),
-        Resize((256, 256)),
-        ToDtype(torch.float32, scale=True),
-        Normalize((0.5,), (0.5,)),
+        Resize((256, 256), interpolation=InterpolationMode.NEAREST),
+        ToDtype(torch.int64),  # no scaling
     ])
 
     # Load the dataset and make a split for training and validation
     train_dataset = Cityscapes(
-        args.data_dir, 
-        split="train", 
-        mode="fine", 
-        target_type="semantic", 
-        transforms=transform
-    )
-    valid_dataset = Cityscapes(
-        args.data_dir, 
-        split="val", 
-        mode="fine", 
-        target_type="semantic", 
-        transforms=transform
+    args.data_dir,
+    split="train",
+    mode="fine",
+    target_type="semantic",
+    transform=img_transform,
+    target_transform=target_transform,
     )
 
-    train_dataset = wrap_dataset_for_transforms_v2(train_dataset)
-    valid_dataset = wrap_dataset_for_transforms_v2(valid_dataset)
+    valid_dataset = Cityscapes(
+        args.data_dir,
+        split="val",
+        mode="fine",
+        target_type="semantic",
+        transform=img_transform,
+        target_transform=target_transform,
+    )
 
     train_dataloader = DataLoader(
         train_dataset, 
@@ -215,7 +223,7 @@ def main(args):
                     os.remove(current_best_model_path)
                 current_best_model_path = os.path.join(
                     output_dir, 
-                    f"best_model-epoch={epoch:04}-val_loss={valid_loss:04}.pth"
+                    f"best_model-epoch={epoch:04}-val_loss={valid_loss:04}.pt"
                 )
                 torch.save(model.state_dict(), current_best_model_path)
         
@@ -226,7 +234,7 @@ def main(args):
         model.state_dict(),
         os.path.join(
             output_dir,
-            f"final_model-epoch={epoch:04}-val_loss={valid_loss:04}.pth"
+            f"final_model-epoch={epoch:04}-val_loss={valid_loss:04}.pt"
         )
     )
     wandb.finish()

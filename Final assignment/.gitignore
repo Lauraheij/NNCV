@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Ignore the 10,000+ images and data
 data/
 img/
@@ -14,3 +15,8 @@ checkpoints/
 # Python junk
 __pycache__/
 .env
+=======
+data/
+*.sif
+*.out
+>>>>>>> upstream/main
