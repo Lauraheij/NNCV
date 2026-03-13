@@ -31,6 +31,10 @@ from torchvision.transforms.v2 import (
     InterpolationMode
 )
 
+from torchvision.transforms import v2 
+from torchvision.datasets import wrap_dataset_for_transforms_v2
+from torchmetrics.classification import MulticlassJaccardIndex
+
 from model import Model
 
 
@@ -89,41 +93,46 @@ def main(args):
     torch.backends.cudnn.deterministic = True
 
     # Define the device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") #TODO: change to mac?
 
-    # Define the transforms to apply to the data
-    img_transform = Compose([
-    ToImage(),
-    Resize((256, 256)),
-    ToDtype(torch.float32, scale=True),
-    Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    # Replace your current img_transform and target_transform with this:
+    train_transforms = v2.Compose([
+        v2.ToImage(),
+        # Fixed aspect ratio (Height, Width)
+        v2.Resize((256, 512), interpolation=v2.InterpolationMode.BILINEAR),
+        # Essential for Peak Performance:
+        v2.RandomHorizontalFlip(p=0.5), 
+        # Use ImageNet normalization (Standard for pre-trained models)
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=(0.5,), std=(0.5,)),
     ])
 
-    # Target transform (mask)
-    target_transform = Compose([
-        ToImage(),
-        Resize((256, 256), interpolation=InterpolationMode.NEAREST),
-        ToDtype(torch.int64),  # no scaling
-    ])
-
-    # Load the dataset and make a split for training and validation
+    # Validation doesn't get flips
+    val_transforms = v2.Compose([
+        v2.ToImage(),
+        v2.Resize((256, 512), interpolation=v2.InterpolationMode.BILINEAR),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=(0.5,), std=(0.5,)),
+])
+ 
     train_dataset = Cityscapes(
-    args.data_dir,
-    split="train",
-    mode="fine",
-    target_type="semantic",
-    transform=img_transform,
-    target_transform=target_transform,
+    args.data_dir, 
+    split="train", 
+    mode="fine", 
+    target_type="semantic", 
+    transforms=train_transforms # Use the plural 'transforms'
     )
 
     valid_dataset = Cityscapes(
-        args.data_dir,
-        split="val",
-        mode="fine",
-        target_type="semantic",
-        transform=img_transform,
-        target_transform=target_transform,
+        args.data_dir, 
+        split="val", 
+        mode="fine", 
+        target_type="semantic", 
+        transforms=val_transforms
     )
+
+    train_dataset = wrap_dataset_for_transforms_v2(train_dataset)
+    valid_dataset = wrap_dataset_for_transforms_v2(valid_dataset)
 
     train_dataloader = DataLoader(
         train_dataset, 
@@ -149,6 +158,9 @@ def main(args):
 
     # Define the optimizer
     optimizer = AdamW(model.parameters(), lr=args.lr)
+    
+    #metric #TODO: why ignore_index 255?
+    iou_metric = MulticlassJaccardIndex(num_classes=19, ignore_index=255).to(device)
 
     # Training loop
     best_valid_loss = float('inf')
@@ -189,6 +201,8 @@ def main(args):
                 labels = labels.long().squeeze(1)  # Remove channel dimension
 
                 outputs = model(images)
+                preds = torch.argmax(outputs, dim=1)
+                iou_metric.update(preds, labels)
                 loss = criterion(outputs, labels)
                 losses.append(loss.item())
             
@@ -213,9 +227,16 @@ def main(args):
                     }, step=(epoch + 1) * len(train_dataloader) - 1)
             
             valid_loss = sum(losses) / len(losses)
+            epoch_miou = iou_metric.compute() 
+            
+            # Log everything at once for this step
             wandb.log({
-                "valid_loss": valid_loss
+                "valid_loss": valid_loss,
+                "val_mIoU": epoch_miou.item()
             }, step=(epoch + 1) * len(train_dataloader) - 1)
+            
+            # Reset metric for the next epoch's validation
+            iou_metric.reset()
 
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss

@@ -6,4 +6,7 @@
 #SBATCH --partition=gpu_a100
 #SBATCH --time=04:00:00
 
-srun apptainer exec --nv --env-file .env container.sif /bin/bash main.sh
+source ~/nncv_env/bin/activate
+srun /bin/bash main.sh
+
+#srun apptainer exec --nv --env-file .env container.sif /bin/bash main.sh

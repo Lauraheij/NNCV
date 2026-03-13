@@ -49,13 +49,8 @@ class Model(nn.Module):
             x (torch.Tensor): Input tensor of shape (batch_size, in_channels, height, width).
         """
         # Check if the input tensor has the expected number of channels
-<<<<<<< HEAD
-        if x.shape[1] != self.inc.double_conv[0].in_channels:
-            raise ValueError(f"Expected {self.inc[0].in_channels} input channels, but got {x.shape[1]}")
-=======
         if x.shape[1] != self.in_channels:
             raise ValueError(f"Expected {self.in_channels} input channels, but got {x.shape[1]}")
->>>>>>> upstream/main
         
         # Encoding path
         x1 = self.inc(x)

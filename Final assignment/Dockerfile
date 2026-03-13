@@ -18,9 +18,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # install dependencies (add any additional dependencies your project requires)
 RUN pip install --no-cache-dir \
-    torch torchvision --index-url https://download.pytorch.org/whl/cu126
+    torch torchvision s--index-url https://download.pytorch.org/whl/cu126
 RUN pip install --no-cache-dir \
-    pillow
+    pillow \
+    torchmetrics
 
 WORKDIR /app
 COPY predict.py /app/predict.py
