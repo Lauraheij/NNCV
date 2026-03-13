@@ -39,9 +39,9 @@ def preprocess(img: Image.Image) -> torch.Tensor:
     # Return a tensor suitable for model input
     transform = Compose([
         ToImage(),
-        Resize(size=(256, 512), interpolation=InterpolationMode.BILINEAR),
+        Resize(size=(252, 518), interpolation=InterpolationMode.BILINEAR), #for Dino
         ToDtype(dtype=torch.float32, scale=True),
-        Normalize(mean=(0.5,), std=(0.5,)),
+        Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ])
 
     img = transform(img)
