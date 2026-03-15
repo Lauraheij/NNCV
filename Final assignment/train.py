@@ -15,6 +15,7 @@ Feel free to customize the script as needed for your use case.
 import os
 from argparse import ArgumentParser
 
+import time
 import wandb
 import torch
 import torch.nn as nn
@@ -33,7 +34,7 @@ from torchvision.transforms.v2 import (
 
 from torchvision.transforms import v2 
 from torchvision.datasets import wrap_dataset_for_transforms_v2
-from torchmetrics.classification import MulticlassJaccardIndex
+from torchmetrics.classification import MulticlassJaccardIndex, MulticlassF1Score
 
 from model import Model
 
@@ -99,20 +100,20 @@ def main(args):
     train_transforms = v2.Compose([
         v2.ToImage(),
         # Fixed aspect ratio (Height, Width)
-        v2.Resize((256, 512), interpolation=v2.InterpolationMode.BILINEAR),
+        v2.Resize((252, 518), interpolation=v2.InterpolationMode.BILINEAR), #for Dino which is 14x14
         # Essential for Peak Performance:
         v2.RandomHorizontalFlip(p=0.5), 
         # Use ImageNet normalization (Standard for pre-trained models)
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize(mean=(0.5,), std=(0.5,)),
+        v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ])
 
     # Validation doesn't get flips
     val_transforms = v2.Compose([
         v2.ToImage(),
-        v2.Resize((256, 512), interpolation=v2.InterpolationMode.BILINEAR),
+        v2.Resize((252, 518), interpolation=v2.InterpolationMode.BILINEAR),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize(mean=(0.5,), std=(0.5,)),
+        v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
 ])
  
     train_dataset = Cityscapes(
@@ -120,7 +121,7 @@ def main(args):
     split="train", 
     mode="fine", 
     target_type="semantic", 
-    transforms=train_transforms # Use the plural 'transforms'
+    transforms=train_transforms
     )
 
     valid_dataset = Cityscapes(
@@ -152,21 +153,49 @@ def main(args):
         in_channels=3,  # RGB images
         n_classes=19,  # 19 classes in the Cityscapes dataset
     ).to(device)
+    
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Total params: {total_params:,}")
+    print(f"Trainable params: {trainable_params:,}")
+    wandb.log({"total_params": total_params, "trainable_params": trainable_params})
 
     # Define the loss function
     criterion = nn.CrossEntropyLoss(ignore_index=255)  # Ignore the void class
 
-    # Define the optimizer
-    optimizer = AdamW(model.parameters(), lr=args.lr)
+    # Define the optimizer (freeze backbone)
+    optimizer = AdamW([
+        {'params': filter(lambda p: p.requires_grad, model.backbone.parameters()), 'lr': args.lr * 0.1},
+        {'params': model.head.parameters(), 'lr': args.lr}
+    ])    
+    # Make the learning rate dyamical
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 
+                                                           T_max=args.epochs, 
+                                                           eta_min=1e-5) # The lr can't go lower
     
-    #metric #TODO: why ignore_index 255?
-    iou_metric = MulticlassJaccardIndex(num_classes=19, ignore_index=255).to(device)
+    # Metric IOU #TODO: why ignore_index 255?
+    iou_metric = MulticlassJaccardIndex(
+        num_classes=19, 
+        ignore_index=255, 
+        average=None # Returns per class instead of the mean
+        ).to(device)
+    
+    # Metric DICE
+    dice_metric = MulticlassF1Score(
+        num_classes=19,
+        ignore_index=255,
+        average=None
+        ).to(device)
 
     # Training loop
     best_valid_loss = float('inf')
     current_best_model_path = None
+    patience = 5
+    epochs_without_improvement = 0
+    best_miou = 0.0
     for epoch in range(args.epochs):
         print(f"Epoch {epoch+1:04}/{args.epochs:04}")
+        epoch_start = time.time()
 
         # Training
         model.train()
@@ -203,6 +232,7 @@ def main(args):
                 outputs = model(images)
                 preds = torch.argmax(outputs, dim=1)
                 iou_metric.update(preds, labels)
+                dice_metric.update(preds, labels)
                 loss = criterion(outputs, labels)
                 losses.append(loss.item())
             
@@ -227,16 +257,39 @@ def main(args):
                     }, step=(epoch + 1) * len(train_dataloader) - 1)
             
             valid_loss = sum(losses) / len(losses)
-            epoch_miou = iou_metric.compute() 
-            
-            # Log everything at once for this step
+            per_class_iou = iou_metric.compute()
+            per_class_dice = dice_metric.compute()
+            epoch_miou = per_class_iou.mean()
+            epoch_mdice = per_class_dice.mean()
+            epoch_time = time.time() - epoch_start
+
             wandb.log({
                 "valid_loss": valid_loss,
-                "val_mIoU": epoch_miou.item()
+                "val_mIoU": epoch_miou.item(),
+                "val_mDice": epoch_mdice.item(),
+                # Per category IoU
+                "IoU_flat": per_class_iou[0:2].mean().item(),
+                "IoU_construction": per_class_iou[2:5].mean().item(),
+                "IoU_object": per_class_iou[5:8].mean().item(),
+                "IoU_nature": per_class_iou[8:10].mean().item(),
+                "IoU_sky": per_class_iou[10].item(),
+                "IoU_human": per_class_iou[11:13].mean().item(),
+                "IoU_vehicle": per_class_iou[13:19].mean().item(),
+                # Per category Dice
+                "Dice_flat": per_class_dice[0:2].mean().item(),
+                "Dice_construction": per_class_dice[2:5].mean().item(),
+                "Dice_object": per_class_dice[5:8].mean().item(),
+                "Dice_nature": per_class_dice[8:10].mean().item(),
+                "Dice_sky": per_class_dice[10].item(),
+                "Dice_human": per_class_dice[11:13].mean().item(),
+                "Dice_vehicle": per_class_dice[13:19].mean().item(),
+                # Training efficiency
+                "epoch_time_seconds": epoch_time,
             }, step=(epoch + 1) * len(train_dataloader) - 1)
             
             # Reset metric for the next epoch's validation
             iou_metric.reset()
+            dice_metric.reset()
 
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
@@ -247,6 +300,20 @@ def main(args):
                     f"best_model-epoch={epoch:04}-val_loss={valid_loss:04}.pt"
                 )
                 torch.save(model.state_dict(), current_best_model_path)
+        
+        scheduler.step()
+        
+        if epoch_miou.item() > best_miou:
+            best_miou = epoch_miou.item()
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+            print(f"No improvement for {epochs_without_improvement} epochs")
+
+        if epochs_without_improvement >= patience:
+            print(f"Early stopping at epoch {epoch+1}")
+            break
+
         
     print("Training complete!")
 

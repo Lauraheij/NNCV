@@ -1,3 +1,8 @@
 data/
 *.sif
 *.out
+
+echo ".env" >> "Final assignment/.gitignore"
+echo "*.pt" >> "Final assignment/.gitignore"
+echo "*.pth" >> "Final assignment/.gitignore"
+echo "checkpoints/" >> "Final assignment/.gitignore"

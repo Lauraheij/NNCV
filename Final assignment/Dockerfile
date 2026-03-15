@@ -28,5 +28,7 @@ WORKDIR /app
 COPY predict.py /app/predict.py
 COPY model.py /app/model.py
 COPY model.pt /app/model.pt
+COPY dinov2_hub /app/hub/facebookresearch_dinov2_main
+COPY dinov2_vitb14_pretrain.pth /app/dinov2_vitb14_pretrain.pth
 
 ENTRYPOINT ["python", "/app/predict.py"]

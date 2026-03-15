@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 
 
 class Model(nn.Module):
@@ -33,13 +34,18 @@ class Model(nn.Module):
 
         self.n_classes = n_classes
         self.patch_size = 14  # DINOv2 uses 14x14 patches
+        
+        os.environ['TORCH_HOME'] = '/app'
 
-        # Load pretrained DINOv2 backbone from torch.hub
+        # Load pretrained DINOv2 backbone
         self.backbone = torch.hub.load(
             'facebookresearch/dinov2',
             backbone,
-            pretrained=True,
+            pretrained=False,  # Don't download
         )
+        # Load weights from local file
+        state_dict = torch.load('/app/dinov2_vitb14_pretrain.pth', map_location='cpu')
+        self.backbone.load_state_dict(state_dict, strict=False)
 
         # Freeze all backbone parameters first
         for param in self.backbone.parameters():
