@@ -39,10 +39,11 @@ class Model(nn.Module):
 
         # Load pretrained DINOv2 backbone
         self.backbone = torch.hub.load(
-            'facebookresearch/dinov2',
+            '/app/hub/facebookresearch_dinov2_main',
             backbone,
-            pretrained=False,  # Don't download
-        )
+            source='local',
+            pretrained=False,
+)
         # Load weights from local file
         state_dict = torch.load('/app/dinov2_vitb14_pretrain.pth', map_location='cpu')
         self.backbone.load_state_dict(state_dict, strict=False)
