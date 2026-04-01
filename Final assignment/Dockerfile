@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y \
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-
 # install dependencies (add any additional dependencies your project requires)
 RUN pip install --no-cache-dir \
     torch torchvision --index-url https://download.pytorch.org/whl/cu126
@@ -25,10 +24,29 @@ RUN pip install --no-cache-dir \
     timm 
 
 WORKDIR /app
-COPY predict.py /app/predict.py
-COPY model.py /app/model.py
-COPY model.pt /app/model.pt
-COPY dinov2_hub /app/hub/facebookresearch_dinov2_main
-COPY dinov2_vitb14_pretrain.pth /app/dinov2_vitb14_pretrain.pth
+
+# COPY predict.py /app/predict.py
+# COPY model.py /app/model.py
+# COPY model.pt /app/model.pt
+# #COPY dinov2_hub /app/hub/facebookresearch_dinov2_main
+# COPY dinov2_hub /app/dinov2_hub
+# COPY dinov2_vitb14_pretrain.pth /app/dinov2_vitb14_pretrain.pth
+
+# ENTRYPOINT ["python", "/app/predict.py"]
+
+# We put them here so changing them doesn't trigger a pip re-install
+ARG PREDICT_FILE=predict.py
+ARG MODEL_ARCH_FILE=model.py
+ARG MODEL_WEIGHTS_FILE=model.pt
+ARG PRETRAIN_PTH=dinov2_vitb14_pretrain.pth
+
+# Use the variables to copy files into fixed names for the server
+COPY ${PREDICT_FILE} /app/predict.py
+COPY ${MODEL_ARCH_FILE} /app/model.py
+COPY ${MODEL_WEIGHTS_FILE} /app/model.pt
+COPY ${PRETRAIN_PTH} /app/dinov2_vitb14_pretrain.pth
+
+# This folder seems common to all, so we copy it directly
+COPY dinov2_hub /app/dinov2_hub
 
 ENTRYPOINT ["python", "/app/predict.py"]
