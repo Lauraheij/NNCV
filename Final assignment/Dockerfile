@@ -39,14 +39,13 @@ ARG PREDICT_FILE=predict.py
 ARG MODEL_ARCH_FILE=model.py
 ARG MODEL_WEIGHTS_FILE=model.pt
 ARG PRETRAIN_PTH=dinov2_vitb14_pretrain.pth
+ARG PRETRAIN_PTH_DEST
 
 # Use the variables to copy files into fixed names for the server
 COPY ${PREDICT_FILE} /app/predict.py
 COPY ${MODEL_ARCH_FILE} /app/model.py
 COPY ${MODEL_WEIGHTS_FILE} /app/model.pt
-COPY ${PRETRAIN_PTH} /app/dinov2_vitb14_pretrain.pth
-
-# This folder seems common to all, so we copy it directly
+COPY ${PRETRAIN_PTH} /app/${PRETRAIN_PTH_DEST}
 COPY dinov2_hub /app/dinov2_hub
 
 ENTRYPOINT ["python", "/app/predict.py"]
