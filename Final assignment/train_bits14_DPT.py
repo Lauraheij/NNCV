@@ -133,26 +133,23 @@ def main(args):
     output_dir = os.path.join("checkpoints", args.experiment_id)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Set seed for reproducability
-    # If you add other sources of randomness (NumPy, Random), 
-    # make sure to set their seeds as well
+    # set seed
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = True
 
     # Define the device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Replace your current img_transform and target_transform with this:
+    # Data augmentations
     train_transforms = v2.Compose([
         v2.ToImage(),
-        # CHANGE: RandomResizedCrop replaces Resize for training
-        v2.RandomResizedCrop(size=(252, 518), scale=(0.5, 1.0), #orginal:
+        v2.RandomResizedCrop(size=(252, 518), scale=(0.5, 1.0),
                             interpolation=v2.InterpolationMode.BILINEAR),
         v2.RandomHorizontalFlip(p=0.5),
         v2.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
         v2.RandomGrayscale(p=0.1),
-        v2.GaussianBlur(kernel_size=5, sigma=(0.1, 2.0)),          # ADD
-        v2.RandomAdjustSharpness(sharpness_factor=2, p=0.3),       # ADD
+        v2.GaussianBlur(kernel_size=5, sigma=(0.1, 2.0)),
+        v2.RandomAdjustSharpness(sharpness_factor=2, p=0.3),
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ])
@@ -200,7 +197,7 @@ def main(args):
     # Define the model
     model = Model(
         in_channels=3,  # RGB images
-        n_classes=19,  # 19 classes in the Cityscapes dataset
+        n_classes=19,  
     ).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
@@ -210,9 +207,9 @@ def main(args):
     wandb.log({"total_params": total_params, "trainable_params": trainable_params})
 
     # Define the loss function
-    criterion = CombinedLoss(ignore_index=255, dice_weight=0.2)  # Ignore the void class, dice_weight = ...
+    criterion = CombinedLoss(ignore_index=255, dice_weight=0.2) 
 
-    # Change your optimizer logic
+    # Optimizer logic
     optimizer = AdamW([
         {'params': model.backbone.blocks[-6:].parameters(), 'lr': args.lr},
         {'params': model.backbone.norm.parameters(), 'lr': args.lr},
@@ -247,7 +244,6 @@ def main(args):
     ).to(device)
 
     # Training loop
-    #best_valid_loss = float('inf')
     current_best_miou_path = None
     patience = 5
     epochs_without_improvement = 0
@@ -340,7 +336,7 @@ def main(args):
                 "IoU_human": per_class_iou[11:13].mean().item(),
                 "IoU_vehicle": per_class_iou[13:19].mean().item(),
 
-                # ADD: Per category Dice — mirrors the IoU categories
+                # Per category Dice 
                 "Dice_flat": per_class_dice[0:2].mean().item(),
                 "Dice_construction": per_class_dice[2:5].mean().item(),
                 "Dice_object": per_class_dice[5:8].mean().item(),
@@ -356,29 +352,8 @@ def main(args):
             iou_metric.reset()
             dice_metric.reset()
             calibration_metric.reset()
-
-        #     if valid_loss < best_valid_loss:
-        #         best_valid_loss = valid_loss
-        #         if current_best_model_path:
-        #             os.remove(current_best_model_path)
-        #         current_best_model_path = os.path.join(
-        #             output_dir, 
-        #             f"best_model-epoch={epoch:04}-val_loss={valid_loss:04}.pt"
-        #         )
-        #         torch.save(model.state_dict(), current_best_model_path)
         
         scheduler.step()
-        
-        # if epoch_miou.item() > best_miou:
-        #     best_miou = epoch_miou.item()
-        #     epochs_without_improvement = 0
-        # else:
-        #     epochs_without_improvement += 1
-        #     print(f"No improvement for {epochs_without_improvement} epochs")
-
-        # if epochs_without_improvement >= patience:
-        #     print(f"Early stopping at epoch {epoch+1}")
-        #     break
         
         if epoch_miou.item() > best_miou:
             best_miou = epoch_miou.item()

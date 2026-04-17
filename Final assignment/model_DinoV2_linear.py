@@ -53,7 +53,7 @@ class Model(nn.Module):
         }
         embed_dim = embed_dims[backbone]
 
-        # CHANGE: simple linear head instead of DPT
+        # simple linear head instead of DPT
         self.head = LinearHead(embed_dim=embed_dim, n_classes=n_classes)
 
     def forward(self, x):
@@ -61,7 +61,7 @@ class Model(nn.Module):
         h_patches = H // self.patch_size
         w_patches = W // self.patch_size
 
-        # CHANGE: only use last layer — no multi-scale
+        # only use last layer — no multi-scale
         feat = self.backbone.get_intermediate_layers(x, n=[11])[0]
         feat = feat.reshape(B, h_patches, w_patches, -1)
         feat = feat.permute(0, 3, 1, 2).contiguous()  # (B, embed_dim, h_p, w_p)

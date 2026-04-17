@@ -161,8 +161,6 @@ def main(args):
     os.makedirs(output_dir, exist_ok=True)
 
     # Set seed for reproducability
-    # If you add other sources of randomness (NumPy, Random), 
-    # make sure to set their seeds as well
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = True
 
@@ -226,7 +224,7 @@ def main(args):
     # Define the model
     model = Model(
         in_channels=3,  # RGB images
-        n_classes=19,  # 19 classes in the Cityscapes dataset
+        n_classes=19,  
     ).to(device)
     
     from model_DinoV2_DPT import Model as TeacherModel
@@ -246,7 +244,7 @@ def main(args):
     # Define the loss function
     criterion = DistillationLoss(alpha=0.5, temperature=4.0, ignore_index=255)
 
-    # Change your optimizer logic
+    # Optimizer logic
     optimizer = AdamW([
         {'params': model.backbone.blocks[-6:].parameters(), 'lr': args.lr},
         {'params': model.backbone.norm.parameters(), 'lr': args.lr},
@@ -281,7 +279,6 @@ def main(args):
     ).to(device)
 
     # Training loop
-    #best_valid_loss = float('inf')
     current_best_miou_path = None
     patience = 5
     epochs_without_improvement = 0
@@ -310,7 +307,7 @@ def main(args):
             # Downsample teacher predictions to match the student's output dimensions
             teacher_outputs = F.interpolate(teacher_outputs, size=outputs.shape[2:], mode='bilinear', align_corners=False)
             
-            # Calculate the loss (unpacking all three returns)
+            # Calculate the loss
             loss, ce_loss, kl_loss = criterion(outputs, teacher_outputs, labels)
 
             loss.backward()
@@ -395,7 +392,7 @@ def main(args):
                 "IoU_human": per_class_iou[11:13].mean().item(),
                 "IoU_vehicle": per_class_iou[13:19].mean().item(),
 
-                # ADD: Per category Dice — mirrors the IoU categories
+                # Per category Dice 
                 "Dice_flat": per_class_dice[0:2].mean().item(),
                 "Dice_construction": per_class_dice[2:5].mean().item(),
                 "Dice_object": per_class_dice[5:8].mean().item(),

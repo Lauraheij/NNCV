@@ -31,7 +31,7 @@ class EfficientFusionHead(nn.Module):
         self.classifier = nn.Conv2d(channels, n_classes, kernel_size=1)
 
     def forward(self, features):
-        # Sum features instead of concatenating to save memory/compute
+        # Sum features instead of concatenating
         fused_features = features[0]
         for f in features[1:]:
             fused_features = fused_features + f
@@ -90,10 +90,9 @@ class Model(nn.Module):
         self.head = EfficientFusionHead(channels=64, n_classes=n_classes)
 
     def forward(self, x):
-        # 1. Save the original full-res size so we can upsample back to it at the end
+        # Save the original full-res size so we can upsample back to it at the end
         B, C, orig_H, orig_W = x.shape
 
-        # This locks in your ~6.2 GFLOPs regardless of the test server's input size.
         x = F.interpolate(x, size=(168, 336), mode='bilinear', align_corners=False)
 
         # Update H and W to the 168x336 dimensions
@@ -116,7 +115,7 @@ class Model(nn.Module):
 
         logits = self.head(projected)
         
-        # 3. Upsample the logits all the way back to the server's original expected resolution
+        # Upsample the logits
         logits = F.interpolate(logits, size=(orig_H, orig_W), mode='bilinear', align_corners=False)
         
         return logits
