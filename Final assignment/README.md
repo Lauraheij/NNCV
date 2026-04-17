@@ -18,8 +18,9 @@ To run DINOv2 without an internet connection, clone the repository locally and d
 ```git clone https://github.com/facebookresearch/dinov2.git dinov2_hub```
 
 Followed by downloading the DinoV2 ViT-B/14 and ViT-S/14 backbone weights:
-```wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vitb14/dinov2_vitb14_pretrain.pth```
-```wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vits14/dinov2_vits14_pretrain.pth```
+``` wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vitb14/dinov2_vitb14_pretrain.pth
+    wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vits14/dinov2_vits14_pretrain.pth
+```
 
 This makes the ViT-B/14 and ViT-S/14 weights available locally, so no internet access is required at runtime.
 
@@ -43,8 +44,10 @@ python3 train.py \
 ```
 
 Training the models was done via SLURM queue:
-```chmod +x jobscript_slurm.sh
-sbatch jobscript_slurm.sh```
+```bash
+chmod +x jobscript_slurm.sh
+sbatch jobscript_slurm.sh
+```
 
 During development, specific architectures (backbone type and decoder head) were selected by manually modifying the Model class in model.py and the corresponding logic in train.py. For exact reproduction of specific results, ensure the configuration in model.py matches the desired architecture before submitting the SLURM job. I apologize for this practical limitation; while this workflow supported rapid iteration during the development phase, I recognize it is not the most efficient approach for seamless reproducibility.
 
