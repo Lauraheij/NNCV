@@ -1,24 +1,19 @@
 # Evaluating DINOv2 Architectures for Semantic Segmentation: Trade-offs in Performance andEfficiency
-Laura Heij
-Department of Mathematics and Computer Science
-Eindhoven University of Technology
-l.a.f.heij@student.tue.nl
 
 ## Overview
 This repository contains all code for the final assignment of 5LSM0. The project approaches semantic segmentation of urban street scenes (Cityscapes) from two complementary angles:
 
-- Peak Performance: Maximising segmentation quality using a DINOv2 ViT-B/14 backbone with two decoder heads (Linear and multi-scale DPT Fusion).
-- Efficiency: Achieving the best possible quality-per-FLOP trade-off using a compact DINOv2 ViT-S/14 backbone with a lightweight EfficientFusionHead, reduced input resolution, and optional knowledge distillation from the peak model.
-
+- **Peak Performance**: Maximising segmentation quality using a DINOv2 ViT-B/14 backbone with two decoder heads (Linear and multi-scale DPT Fusion).
+- **Efficiency**: Achieving the best possible quality-per-FLOP trade-off using a compact DINOv2 ViT-S/14 backbone with a lightweight EfficientFusionHead, reduced input resolution, and optional knowledge distillation from the peak model.
 
 ## Environment Setup
-The Environmental Setup and data downloading is based on the `README-Installation.md` and `README-slurm.md`. The approach I used was to connect to snellius via the SSH key, here I created a virtual environment downloading the extra required packages for my models:
+The environmental setup and data downloading is based on the `README-Installation.md` and `README-slurm.md`. 
+Connect to Snellius via SSH key, then create a virtual environment and install the required packages:
 
-``` pip install torch torchvision pillow torchmetrics timm wandb ```
+``` pip install torch torchvision pillow torchmetrics timm wandb```
 
-These libraries are also added to the `Dockerfile`, for server submission correctness. 
-
-To ensure that the DinoV2 would not be internet dependent I cloned the DINOv2:
+These dependencies are also included in the `Dockerfile` to ensure correct server submission.
+To run DINOv2 without an internet connection, clone the repository locally and download the pretrained backbone weights:
 
 ```git clone https://github.com/facebookresearch/dinov2.git dinov2_hub```
 
@@ -26,13 +21,12 @@ Followed by downloading the DinoV2 ViT-B/14 and ViT-S/14 backbone weights:
 ```wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vitb14/dinov2_vitb14_pretrain.pth```
 ```wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vits14/dinov2_vits14_pretrain.pth```
 
+This makes the ViT-B/14 and ViT-S/14 weights available locally, so no internet access is required at runtime.
+
 ## Data Preproccesing
-There are no data preprocessing steps needed. The downloaded data is only preprocessed in the scripts itself and the training/validation and test split was already given by the course instructors.
+The Cityscapes dataset downloading is part of the `README-Installation.md` instructions, when these steps are followed the data can be found in the folder `data`. No further manual data preprocessing steps are required. The raw data is processed dynamically within the training scripts. The training, validation, and test splits are used as provided by the course instructors.
 
 ## Training
-Training the models was done via SLURM queue:
-```sbatch jobscript_slurm.sh```
-
 The different experiments where run using these settings (this is the main.sh file).
 
 ```bash
@@ -48,9 +42,31 @@ python3 train.py \
     --experiment-id "experiment-name" \
 ```
 
-As it is cumbersome approach I changed the model I wanted to train to the `model.py` as well as the corresponding `train.py` and `predict.py`.
-During the development this was no issue as I trained it and then properly saved it with a relevent name. For reprosobility I now see that this is not the most usefull approach (excuses).
+Training the models was done via SLURM queue:
+```chmod +x jobscript_slurm.sh
+sbatch jobscript_slurm.sh```
 
+During development, specific architectures (backbone type and decoder head) were selected by manually modifying the Model class in model.py and the corresponding logic in train.py. For exact reproduction of specific results, ensure the configuration in model.py matches the desired architecture before submitting the SLURM job. I apologize for this practical limitation; while this workflow supported rapid iteration during the development phase, I recognize it is not the most efficient approach for seamless reproducibility.
+
+## Code Structure
+
+### Efficiency Model
+
+The lightweight efficiency model is built around the DINOv2 ViT-S/14 backbone. The relevant files are:
+
+- `model_DinoV2_vits14.py` — model definition
+- `train_vits14.py` — standard training for efficiency
+- `train_vits14_teacher.py` — knowledge distillation training
+- `predict_vits14.py` — inference (used by both training approaches)
+
+### Peak Performance Models
+
+The higher-capacity models use a DINOv2 ViT-B/14 backbone with either a DPT or linear decoder head. The relevant files are:
+
+- `model_DinoV2_DPT.py` — DPT decoder model definition
+- `model_DinoV2_linear.py` — linear decoder model definition
+- `train_vitb14_DPT.py` — training for both model variants
+- `predict_vitb14.py` — inference for both model variants
 
 ## WandB
 The tracking for the different models was done via Weights & Biases. These also provided the segmentation images of the qualitative analysis. 
