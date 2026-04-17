@@ -65,7 +65,7 @@ class Model(nn.Module):
             for param in block.parameters():
                 param.requires_grad = True
 
-        # Always unfreeze norm
+        # Unfreeze norm
         for param in self.backbone.norm.parameters():
             param.requires_grad = True
 
@@ -76,7 +76,6 @@ class Model(nn.Module):
         }
         embed_dim = embed_dims[backbone]
 
-        # CHANGE: DPTReassemble instead of FeatureProjection
         self.reassembles = nn.ModuleList([
             DPTReassemble(embed_dim, 256) for _ in range(4)
         ])
@@ -88,7 +87,7 @@ class Model(nn.Module):
         h_patches = H // self.patch_size
         w_patches = W // self.patch_size
 
-        # CHANGE: target is 1/4 input resolution, not patch resolution
+        # Target is 1/4 input resolution
         target_hw = (H // 4, W // 4)
 
         raw_features = self.backbone.get_intermediate_layers(x, n=[2, 5, 8, 11])
@@ -97,7 +96,7 @@ class Model(nn.Module):
         for i, feat in enumerate(raw_features):
             f = feat.reshape(B, h_patches, w_patches, -1)
             f = f.permute(0, 3, 1, 2).contiguous()
-            # CHANGE: upsample each layer to same target_hw before fusion
+            # upsample each layer to same target_hw before fusion
             f = self.reassembles[i](f, target_hw)
             projected.append(f)
 

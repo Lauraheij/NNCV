@@ -45,7 +45,7 @@ def preprocess(img: Image.Image) -> torch.Tensor:
     ])
 
     img = transform(img)
-    img = img.unsqueeze(0)  # Add batch dimension
+    img = img.unsqueeze(0)
     return img
 
 
