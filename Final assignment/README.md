@@ -18,7 +18,8 @@ To run DINOv2 without an internet connection, clone the repository locally and d
 ```git clone https://github.com/facebookresearch/dinov2.git dinov2_hub```
 
 Followed by downloading the DinoV2 ViT-B/14 and ViT-S/14 backbone weights:
-``` wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vitb14/dinov2_vitb14_pretrain.pth
+```bash
+    wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vitb14/dinov2_vitb14_pretrain.pth
     wget https://dl.fbaipublicfiles.com/dinov2/dinov2_vits14/dinov2_vits14_pretrain.pth
 ```
 
@@ -77,7 +78,7 @@ This can be enable through the `.env` file. Adding your correct credentials.
 
 
 ## Server Submissions
-Here are my submission as also can be found on the server (sorry for the bad naming in the peak performance branch)
+Here are my submissions, as also can be found on the server (sorry for the inconvinent naming in the peak performance branch)
 ### Peak performance
 | Username | Experiment |
 | :--- | :--- |
