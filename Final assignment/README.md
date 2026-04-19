@@ -79,6 +79,7 @@ This can be enable through the `.env` file. Adding your correct credentials.
 
 ## Server Submissions
 Here are my submissions, as also can be found on the server (sorry for the inconvinent naming in the peak performance branch)
+Email: l.a.f.heij@student.tue.nl
 ### Peak performance
 | Username | Experiment |
 | :--- | :--- |
